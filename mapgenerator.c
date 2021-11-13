@@ -15,7 +15,7 @@ enum FIELDS {
   GOAL = 0
 };
 
-int** generate_map(int y, int x) {
+int** generate_map(int y, int x, enum FIELDS fill) {
   /*
   int** map;
   if (!(map = malloc(y*sizeof(*map)))) {
@@ -48,7 +48,7 @@ int** generate_map(int y, int x) {
     exit(1);
   }
   for (int i=0; i<x*y; ++i)
-    tmp[i] = EMPTY;
+    tmp[i] = fill;
   for (int i=0; i<y; ++i)
     map[i] = tmp+x*i;
   return map;
@@ -140,7 +140,7 @@ void place_exact(int** map, int y, int x, int n, enum FIELDS type) {
 }
 
 void potentialfeld(int** area, int y, int x) {
-  #define CHECKPOT(Y,X) (((Y)>=0 && (Y)<y && (X)>=0 && (X)<x && area[(Y)][(X)] == EMPTY) ? (area[(Y)][(X)] = pot+1, 1) : (0))
+  #define NEXTPOT(Y,X) (((Y)>=0 && (Y)<y && (X)>=0 && (X)<x && area[(Y)][(X)] == EMPTY) ? (area[(Y)][(X)] = pot+1, 1) : (0))
   bool changed;
   int pot = GOAL;
   do {
@@ -149,14 +149,76 @@ void potentialfeld(int** area, int y, int x) {
     for (int i=0; i<y; ++i) {
       for(int j=0; j<x; ++j) {
         if (area[i][j] == pot) {
-          changed |= CHECKPOT(i,j-1) | CHECKPOT(i,j+1) |  CHECKPOT(i-1,j) | CHECKPOT(i+1,j);
+          changed |= NEXTPOT(i,j-1) | NEXTPOT(i,j+1) |  NEXTPOT(i-1,j) | NEXTPOT(i+1,j);
         }
       }
     }
     ++pot;
   } while(changed);
 
-  #undef CHECKPOT 
+  #undef NEXTPOT 
+}
+
+void shuffle(int* array, int n) {
+  #define SWAP(A,a,b) do {int temp = A[(a)]; A[(a)] = A[(b)]; A[(b)] = temp;} while(0)
+  for(int i=0; i<50; ++i) {
+    int a = rand() % n;
+    int b = rand() % n;
+    SWAP(array, a, b);
+  }
+  #undef SWAP
+}
+
+void rec_gen_maze_rdfs(int** map, int y, int x, int i, int j) {
+  #define CHECKCELL(Y, X) ((Y)>=0 && (Y)<y && (X)>=0 && (X)<x && map[(Y)][(X)] == OBSTACLE)
+
+  map[i][j] = EMPTY;
+
+  int directions[] = {0,1,2,3};
+  printf("new cell: (%d;%d)\n", i, j);
+  shuffle(directions, 4);
+  for (int i = 0; i < 4; ++i) {
+    printf("%d ", directions[i]);
+  }
+  puts("");
+  for (int k=0; k<4; ++k) {
+    switch (directions[k]) {
+      case 0:
+        if (CHECKCELL(i-2,j)) {
+          map[i-1][j] = EMPTY;
+          rec_gen_maze_rdfs(map, y, x, i-2, j);
+        }
+        break;
+      case 1:
+        if (CHECKCELL(i+2,j)) {
+          map[i+1][j] = EMPTY;
+          rec_gen_maze_rdfs(map, y, x, i+2, j); 
+        }
+        break;
+      case 2:
+        if (CHECKCELL(i,j-2)) {
+          map[i][j-1] = EMPTY;
+          rec_gen_maze_rdfs(map, y, x, i, j-2); 
+        }
+        break;
+      case 3:
+        if (CHECKCELL(i,j+2)) {
+          map[i][j+1] = EMPTY;
+          rec_gen_maze_rdfs(map, y, x, i, j+2); 
+        }
+        break;
+    }
+  }
+  #undef CHECKCELL
+}
+
+int** gen_maze_rdfs(int y, int x) {
+  int** map = generate_map(y, x, OBSTACLE);
+  srand(time(NULL));
+  int i = rand() % y;
+  int j = rand() % x;
+  rec_gen_maze_rdfs(map, y, x, i, j);
+  return map;
 }
 
 int main(int argc, char** argv) {
@@ -170,13 +232,16 @@ int main(int argc, char** argv) {
   int n_obstacles = atoi(argv[3]);
   int n_goals = atoi(argv[4]);
   
-  int** board = generate_map(y,x);
+  //int** board = generate_map(y, x, EMPTY);
 
   //goals_prob(board, y, x, goals);
+  /*
   place_exact(board, y, x, n_obstacles, OBSTACLE);
-  place_exact(board, y, x, n_goals, GOAL);
+  */
+  int** board = gen_maze_rdfs(y, x);
   draw_map(board, y, x);
 
+  place_exact(board, y, x, n_goals, GOAL);
   potentialfeld(board, y, x);
   draw_map(board, y, x);
 
