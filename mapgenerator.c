@@ -4,6 +4,8 @@
 #include <time.h>
 #include <stdbool.h>
 
+#include "bmp_writer.h"
+
 typedef struct potfield {
   int y,x;
   int** map;
@@ -175,12 +177,8 @@ void rec_gen_maze_rdfs(int** map, int y, int x, int i, int j) {
   map[i][j] = EMPTY;
 
   int directions[] = {0,1,2,3};
-  printf("new cell: (%d;%d)\n", i, j);
+  //printf("new cell: (%d;%d)\n", i, j);
   shuffle(directions, 4);
-  for (int i = 0; i < 4; ++i) {
-    printf("%d ", directions[i]);
-  }
-  puts("");
   for (int k=0; k<4; ++k) {
     switch (directions[k]) {
       case 0:
@@ -221,9 +219,35 @@ int** gen_maze_rdfs(int y, int x) {
   return map;
 }
 
+void to_pixel(int val, struct pixel* p, void* max) {
+  int max_val = *(int*)max;
+  switch (val) {
+    case -2:
+      p->r = 0;
+      p->g = 0;
+      p->b = 0;
+      break;
+    case -1:
+      p->r = 100;
+      p->g = 100;
+      p->b = 100;
+      break;
+    case 0:
+      p->r = 0;
+      p->g = 255;
+      p->b = 0;
+      break;
+    default:
+      p->r = 255*(max_val-val)/max_val;
+      p->g = 0;
+      p->b = 255*val/max_val;
+      break;
+  }
+}
+
 int main(int argc, char** argv) {
-  if (argc != 5) {
-    fprintf(stderr, "usage: %s #ROWS #COLS #OBSTACLES #GOALS\n", *argv);
+  if (argc != 6) {
+    fprintf(stderr, "usage: %s #ROWS #COLS #OBSTACLES #GOALS SCALE\n", *argv);
     return 1;
   }
 
@@ -231,19 +255,29 @@ int main(int argc, char** argv) {
   int x = atoi(argv[2]);
   int n_obstacles = atoi(argv[3]);
   int n_goals = atoi(argv[4]);
+  int scale = atoi(argv[5]);
   
-  //int** board = generate_map(y, x, EMPTY);
-
-  //goals_prob(board, y, x, goals);
-  /*
+  int** board = generate_map(y, x, EMPTY);
+  
   place_exact(board, y, x, n_obstacles, OBSTACLE);
-  */
-  int** board = gen_maze_rdfs(y, x);
-  draw_map(board, y, x);
+  
+  //int** board = gen_maze_rdfs(y, x);
+  //draw_map(board, y, x);
 
   place_exact(board, y, x, n_goals, GOAL);
   potentialfeld(board, y, x);
-  draw_map(board, y, x);
+  //draw_map(board, y, x);
+
+  int max_val = 0;
+  
+  for (int i=0; i<y; ++i) {
+    for (int j=0; j<x; ++j) {
+      int v = board[i][j];
+      max_val = v > max_val ? v : max_val;
+    }
+  }
+  printf("max_val: %d\n", max_val);
+  bmp_from_array2d(board, y, x, scale, to_pixel, &max_val);
 
   remove_map(board, y);
   return 0;
