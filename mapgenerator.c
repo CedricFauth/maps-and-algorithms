@@ -257,11 +257,11 @@ int main(int argc, char** argv) {
   int n_goals = atoi(argv[4]);
   int scale = atoi(argv[5]);
   
-  int** board = generate_map(y, x, EMPTY);
+  //int** board = generate_map(y, x, EMPTY);
   
-  place_exact(board, y, x, n_obstacles, OBSTACLE);
+  //place_exact(board, y, x, n_obstacles, OBSTACLE);
   
-  //int** board = gen_maze_rdfs(y, x);
+  int** board = gen_maze_rdfs(y, x);
   //draw_map(board, y, x);
 
   place_exact(board, y, x, n_goals, GOAL);
