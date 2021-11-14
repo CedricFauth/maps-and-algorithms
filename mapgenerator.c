@@ -219,8 +219,9 @@ int** gen_maze_rdfs(int y, int x) {
   return map;
 }
 
-void to_pixel(int val, struct pixel* p, void* max) {
-  int max_val = *(int*)max;
+void to_pixel(void* v, struct pixel* p, void* tmp) {
+  int val = *(int*)v;
+  int max_val = *(int*)tmp;
   switch (val) {
     case -2:
       p->r = 0;
@@ -266,7 +267,7 @@ int main(int argc, char** argv) {
 
   place_exact(board, y, x, n_goals, GOAL);
   potentialfeld(board, y, x);
-  //draw_map(board, y, x);
+  draw_map(board, y, x);
 
   int max_val = 0;
   
@@ -277,7 +278,7 @@ int main(int argc, char** argv) {
     }
   }
   printf("max_val: %d\n", max_val);
-  bmp_from_array2d(board, y, x, scale, to_pixel, &max_val);
+  bmp_from_array2d(board, sizeof(**board), y, x, scale, to_pixel, &max_val);
 
   remove_map(board, y);
   return 0;

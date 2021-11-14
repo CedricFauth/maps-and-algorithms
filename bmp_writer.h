@@ -32,12 +32,12 @@ struct pixel {
   uint8_t b, g, r;
 }__attribute__((packed));
 
-void bmp_from_array2d(int** array2d, int height, int width, int scale, 
-                        void (*to_pixel)(int v, struct pixel* p, void* tmp), void* tmp) {
+void bmp_from_array2d(void* array2d, int v_size, int height, int width, int scale, 
+                        void (*to_pixel)(void* v, struct pixel* p, void* tmp), void* tmp) {
   uint16_t n_bpp = 24;
   uint32_t row_size = (n_bpp*width*scale+31)/32 * 4;
   uint32_t data_size = height*scale * row_size*scale;
-  printf("rowsize %d\n", row_size);
+  //printf("rowsize %d\n", row_size);
 
   struct bmp_header bmp_head = {
     .magic = {0x42, 0x4d},
@@ -66,14 +66,15 @@ void bmp_from_array2d(int** array2d, int height, int width, int scale,
   fwrite(&bmp_head, 1, 14, f);
   fwrite(&dib_head, 1, 40, f);
 
+  uint8_t** bytes_array2d = (uint8_t**) array2d;
   uint8_t* row = malloc(sizeof(*row)*row_size);
+  struct pixel* pixel_row = (struct pixel*)row;
 
   for (int i=0; i<height; ++i) {
     memset(row, 0, row_size);
-    struct pixel* pixel_row = (struct pixel*)row;
     for (int j=0; j<width; ++j) {
         for (int s=0; s<scale; ++s)
-          to_pixel(array2d[i][j], pixel_row+j*scale+s, tmp);
+          to_pixel(*(bytes_array2d + i) + j*v_size, pixel_row + j*scale + s, tmp);
     }
     for (int s=0; s<scale; ++s)
       fwrite(row, sizeof(*row), row_size, f);
